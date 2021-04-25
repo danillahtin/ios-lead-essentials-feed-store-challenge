@@ -11,11 +11,11 @@ import Foundation
 import CoreData
 
 final class ManagedCache: NSManagedObject {
-    @NSManaged public var timestamp: Date
-    @NSManaged public var images: NSOrderedSet
+    @NSManaged var timestamp: Date
+    @NSManaged var images: NSOrderedSet
 
     func makeLocalFeedImages() -> [LocalFeedImage] {
-        images
+        images.lazy
             .map({ $0 as! ManagedFeedImage })
             .map({ $0.makeLocalFeedImage() })
     }

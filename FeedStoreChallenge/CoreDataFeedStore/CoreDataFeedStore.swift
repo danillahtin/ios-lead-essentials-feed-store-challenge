@@ -18,41 +18,38 @@ public final class CoreDataFeedStore: FeedStore {
     }
 
     public func deleteCachedFeed(completion: @escaping DeletionCompletion) {
-        context.perform { [context] in
+        perform { context in
             do {
-                try context.findCache()
-                    .map({ context.delete($0) })
-                    .map({ try context.save() })
+                try context.removeCacheIfExists()
+                try context.save()
 
                 completion(.none)
             } catch {
+                context.rollback()
                 completion(error)
             }
         }
     }
 
     public func insert(_ feed: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
-        context.perform { [context] in
+        perform { context in
             do {
-                try context.findCache()
-                    .map({ context.delete($0) })
-                    .map({ try context.save() })
-
-                let cache = ManagedCache(with: feed, timestamp: timestamp, in: context)
-                context.insert(cache)
+                try context.removeCacheIfExists()
+                context.insert(feed, timestamp: timestamp)
                 try context.save()
 
                 completion(.none)
             } catch {
+                context.rollback()
                 completion(error)
             }
         }
     }
 
     public func retrieve(completion: @escaping RetrievalCompletion) {
-        context.perform { [context] in
+        perform { context in
             do {
-                guard let cache = try context.findCache() else {
+                guard let cache = try context.requestCache() else {
                     return completion(.empty)
                 }
 
@@ -62,22 +59,24 @@ public final class CoreDataFeedStore: FeedStore {
             }
         }
     }
+
+    private func perform(_ action: @escaping (NSManagedObjectContext) -> ()) {
+        context.perform { [context] in
+            action(context)
+        }
+    }
 }
 
 // MARK: - Helpers
 
 private extension ManagedFeedImage {
-    static func makeFromLocalFeedImage(in context: NSManagedObjectContext) -> (LocalFeedImage) -> ManagedFeedImage {
-        return {
-            let managed = ManagedFeedImage(context: context)
+    convenience init(with image: LocalFeedImage, in context: NSManagedObjectContext) {
+        self.init(context: context)
 
-            managed.id = $0.id
-            managed.details = $0.description
-            managed.location = $0.location
-            managed.url = $0.url
-
-            return managed
-        }
+        id = image.id
+        details = image.description
+        location = image.location
+        url = image.url
     }
 
     func makeLocalFeedImage() -> LocalFeedImage {
@@ -91,13 +90,6 @@ private extension ManagedFeedImage {
 }
 
 private extension ManagedCache {
-    convenience init(with feed: [LocalFeedImage], timestamp: Date, in context: NSManagedObjectContext) {
-        self.init(context: context)
-
-        self.images = NSOrderedSet(array: feed.map(ManagedFeedImage.makeFromLocalFeedImage(in: context)))
-        self.timestamp = timestamp
-    }
-
     func makeLocalFeedImages() -> [LocalFeedImage] {
         images!
             .map({ $0 as! ManagedFeedImage })
@@ -106,9 +98,22 @@ private extension ManagedCache {
 }
 
 private extension NSManagedObjectContext {
-    func findCache() throws -> ManagedCache? {
+    func requestCache() throws -> ManagedCache? {
         let request = NSFetchRequest<ManagedCache>(entityName: ManagedCache.entity().name!)
         return try fetch(request).first
+    }
+
+    func removeCacheIfExists() throws {
+        try requestCache().map(delete)
+    }
+
+    func insert(_ feed: [LocalFeedImage], timestamp: Date) {
+        let cache = ManagedCache(context: self)
+
+        cache.images = NSOrderedSet(array: feed.map({ ManagedFeedImage(with: $0, in: self) }))
+        cache.timestamp = timestamp
+
+        insert(cache)
     }
 }
 
@@ -130,22 +135,24 @@ private extension NSPersistentContainer {
         let container = NSPersistentContainer(name: modelName, managedObjectModel: model)
         container.persistentStoreDescriptions = [NSPersistentStoreDescription(url: url)]
 
+        try container.loadPersistentStoresSync()
+
+        return container
+    }
+
+    private func loadPersistentStoresSync() throws {
         let group = DispatchGroup()
         group.enter()
 
         var error: Error?
-        container.loadPersistentStores(completionHandler: {
+        loadPersistentStores(completionHandler: {
             error = $1.map(Error.loadPersistentStores)
             group.leave()
         })
 
         group.wait()
 
-        if let error = error {
-            throw error
-        }
-
-        return container
+        try error.map({ throw $0 })
     }
 }
 

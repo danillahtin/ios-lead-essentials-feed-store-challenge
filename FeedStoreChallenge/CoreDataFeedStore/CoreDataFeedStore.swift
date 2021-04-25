@@ -53,7 +53,7 @@ public final class CoreDataFeedStore: FeedStore {
                     return completion(.empty)
                 }
 
-                completion(.found(feed: cache.makeLocalFeedImages(), timestamp: cache.timestamp!))
+                completion(.found(feed: cache.makeLocalFeedImages(), timestamp: cache.timestamp))
             } catch {
                 completion(.failure(error))
             }
@@ -69,37 +69,10 @@ public final class CoreDataFeedStore: FeedStore {
 
 // MARK: - Helpers
 
-private extension ManagedFeedImage {
-    convenience init(with image: LocalFeedImage, in context: NSManagedObjectContext) {
-        self.init(context: context)
-
-        id = image.id
-        details = image.description
-        location = image.location
-        url = image.url
-    }
-
-    func makeLocalFeedImage() -> LocalFeedImage {
-        LocalFeedImage(
-            id: id!,
-            description: details,
-            location: location,
-            url: url!
-        )
-    }
-}
-
-private extension ManagedCache {
-    func makeLocalFeedImages() -> [LocalFeedImage] {
-        images!
-            .map({ $0 as! ManagedFeedImage })
-            .map({ $0.makeLocalFeedImage() })
-    }
-}
-
 private extension NSManagedObjectContext {
     func requestCache() throws -> ManagedCache? {
-        let request = NSFetchRequest<ManagedCache>(entityName: ManagedCache.entity().name!)
+        let name = ManagedCache.entity().name!
+        let request = NSFetchRequest<ManagedCache>(entityName: name)
         return try fetch(request).first
     }
 

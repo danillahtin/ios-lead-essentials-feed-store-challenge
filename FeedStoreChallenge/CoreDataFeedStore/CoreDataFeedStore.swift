@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CoreData
 
 public final class CoreDataFeedStore: FeedStore {
     private final class FeedCache {
@@ -20,8 +21,11 @@ public final class CoreDataFeedStore: FeedStore {
     }
 
     private var cache: FeedCache?
+    private let container: NSPersistentContainer?
 
-    public init() {}
+    public init(storeUrl: URL, bundle: Bundle = .main) throws {
+        container = try .load(modelName: "ManagedCacheModel", at: storeUrl, in: bundle)
+    }
 
     public func deleteCachedFeed(completion: @escaping DeletionCompletion) {
         cache = nil
@@ -38,5 +42,49 @@ public final class CoreDataFeedStore: FeedStore {
             return completion(.empty)
         }
         completion(.found(feed: cache.feed, timestamp: cache.timestamp))
+    }
+}
+
+private extension NSPersistentContainer {
+    enum Error: Swift.Error {
+        case modelNotFound(name: String, inBundle: Bundle)
+        case loadPersistentStores(error: Swift.Error)
+    }
+
+    static func load(
+        modelName: String,
+        at url: URL,
+        in bundle: Bundle
+    ) throws -> NSPersistentContainer {
+        guard let model = bundle.model(with: modelName) else {
+            throw Error.modelNotFound(name: modelName, inBundle: bundle)
+        }
+
+        let container = NSPersistentContainer(name: modelName, managedObjectModel: model)
+        container.persistentStoreDescriptions = [NSPersistentStoreDescription(url: url)]
+
+        let group = DispatchGroup()
+        group.enter()
+
+        var error: Error?
+        container.loadPersistentStores(completionHandler: {
+            error = $1.map(Error.loadPersistentStores)
+            group.leave()
+        })
+
+        group.wait()
+
+        if let error = error {
+            throw error
+        }
+
+        return container
+    }
+}
+
+private extension Bundle {
+    func model(with name: String) -> NSManagedObjectModel? {
+        url(forResource: name, withExtension: "momd")
+            .flatMap(NSManagedObjectModel.init(contentsOf:))
     }
 }

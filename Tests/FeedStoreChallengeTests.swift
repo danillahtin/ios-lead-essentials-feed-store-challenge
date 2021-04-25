@@ -93,9 +93,30 @@ class FeedStoreChallengeTests: XCTestCase, FeedStoreSpecs {
 	
 	// - MARK: Helpers
 	
-	private func makeSUT() -> FeedStore {
-        CoreDataFeedStore()
+	private func makeSUT(
+        file: StaticString = #file,
+        line: UInt = #line
+    ) -> FeedStore {
+        let sut = try! CoreDataFeedStore(
+            storeUrl: URL(fileURLWithPath: "/dev/null"),
+            bundle: .init(for: CoreDataFeedStore.self)
+        )
+
+        trackForMemoryLeaks(sut, file: file, line: line)
+
+        return sut
 	}
+
+    private func trackForMemoryLeaks(_ object: AnyObject, file: StaticString, line: UInt) {
+        addTeardownBlock { [weak object] in
+            XCTAssertNil(
+                object,
+                "Object should have been deallocated, potential memory leak",
+                file: file,
+                line: line
+            )
+        }
+    }
 }
 
 //  ***********************

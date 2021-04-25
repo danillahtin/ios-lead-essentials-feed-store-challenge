@@ -11,11 +11,11 @@ import Foundation
 import CoreData
 
 final class ManagedFeedImage: NSManagedObject {
-    @NSManaged var id: UUID
-    @NSManaged var details: String?
-    @NSManaged var location: String?
-    @NSManaged var url: URL
-    @NSManaged var cache: ManagedCache
+    @NSManaged private(set) var id: UUID
+    @NSManaged private(set) var details: String?
+    @NSManaged private(set) var location: String?
+    @NSManaged private(set) var url: URL
+    @NSManaged private(set) var cache: ManagedCache
 
     convenience init(with image: LocalFeedImage, in context: NSManagedObjectContext) {
         self.init(context: context)

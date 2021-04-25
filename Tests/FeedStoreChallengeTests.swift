@@ -5,37 +5,6 @@
 import XCTest
 import FeedStoreChallenge
 
-final class CoreDataFeedStore: FeedStore {
-    private final class FeedCache {
-        let feed: [LocalFeedImage]
-        let timestamp: Date
-
-        init(feed: [LocalFeedImage], timestamp: Date) {
-            self.feed = feed
-            self.timestamp = timestamp
-        }
-    }
-
-    private var cache: FeedCache?
-
-    func deleteCachedFeed(completion: @escaping DeletionCompletion) {
-        cache = nil
-        completion(.none)
-    }
-
-    func insert(_ feed: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
-        cache = FeedCache(feed: feed, timestamp: timestamp)
-        completion(.none)
-    }
-
-    func retrieve(completion: @escaping RetrievalCompletion) {
-        guard let cache = cache else {
-            return completion(.empty)
-        }
-        completion(.found(feed: cache.feed, timestamp: cache.timestamp))
-    }
-}
-
 class FeedStoreChallengeTests: XCTestCase, FeedStoreSpecs {
 	
     //  ***********************

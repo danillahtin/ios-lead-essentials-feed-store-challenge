@@ -21,10 +21,12 @@ public final class CoreDataFeedStore: FeedStore {
     }
 
     private var cache: FeedCache?
-    private let container: NSPersistentContainer?
+    private let container: NSPersistentContainer
+    private let context: NSManagedObjectContext
 
     public init(storeUrl: URL, bundle: Bundle = .main) throws {
         container = try .load(modelName: "ManagedCacheModel", at: storeUrl, in: bundle)
+        context = container.newBackgroundContext()
     }
 
     public func deleteCachedFeed(completion: @escaping DeletionCompletion) {

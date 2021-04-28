@@ -24,8 +24,7 @@ public final class CoreDataFeedStore: FeedStore {
     public func insert(_ feed: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
         context.modify({ context in
             try ManagedCache.removeIfExists(in: context)
-            let cache = ManagedCache(with: feed, timestamp: timestamp, context: context)
-            context.insert(cache)
+            ManagedCache.create(with: feed, timestamp: timestamp, context: context)
         }, completion: completion)
     }
 

@@ -16,13 +16,14 @@ final class ManagedCache: NSManagedObject {
 
     static func create(
         with feed: [LocalFeedImage],
-        timestamp: Date,
-        context: NSManagedObjectContext
-    ) {
-        let cache = ManagedCache(context: context)
+        timestamp: Date
+    ) -> (NSManagedObjectContext) -> () {
+        return { context in
+            let cache = ManagedCache(context: context)
 
-        cache.images = NSOrderedSet(array: feed.map({ ManagedFeedImage(with: $0, in: context) }))
-        cache.timestamp = timestamp
+            cache.images = NSOrderedSet(array: feed.map({ ManagedFeedImage(with: $0, in: context) }))
+            cache.timestamp = timestamp
+        }
     }
 
     func makeLocalFeedImages() -> [LocalFeedImage] {

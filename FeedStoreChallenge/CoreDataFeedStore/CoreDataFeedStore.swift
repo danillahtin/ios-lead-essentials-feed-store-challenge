@@ -22,10 +22,11 @@ public final class CoreDataFeedStore: FeedStore {
     }
 
     public func insert(_ feed: [LocalFeedImage], timestamp: Date, completion: @escaping InsertionCompletion) {
-        context.modify({ context in
-            try ManagedCache.removeIfExists(in: context)
-            ManagedCache.create(with: feed, timestamp: timestamp, context: context)
-        }, completion: completion)
+        context.modify(
+            ManagedCache.removeIfExists,
+            ManagedCache.create(with: feed, timestamp: timestamp),
+            completion: completion
+        )
     }
 
     public func retrieve(completion: @escaping RetrievalCompletion) {
@@ -47,10 +48,10 @@ public final class CoreDataFeedStore: FeedStore {
 // MARK: - Helpers
 
 private extension NSManagedObjectContext {
-    func modify(_ block: @escaping (NSManagedObjectContext) throws -> (), completion: @escaping (Error?) -> ()) {
+    func modify(_ blocks: ((NSManagedObjectContext) throws -> ())..., completion: @escaping (Error?) -> ()) {
         perform { [self] in
             do {
-                try block(self)
+                try blocks.forEach({ try $0(self) })
 
                 if self.hasChanges {
                     try self.save()

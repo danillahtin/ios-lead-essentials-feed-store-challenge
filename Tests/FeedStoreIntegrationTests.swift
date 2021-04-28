@@ -11,6 +11,11 @@ import FeedStoreChallenge
 
 class FeedStoreIntegrationTests: XCTestCase {
 
+    private let fileManager = FileManager.default
+    private var storeUrl: URL {
+        fileManager.temporaryDirectory.appendingPathComponent(String(describing: type(of: self)))
+    }
+
     //  ***********************
     //
     //  Uncomment and implement the following tests if your
@@ -37,14 +42,14 @@ class FeedStoreIntegrationTests: XCTestCase {
     }
 
     func test_retrieve_deliversFeedInsertedOnAnotherInstance() {
-//        let storeToInsert = makeSUT()
-//        let storeToLoad = makeSUT()
-//        let feed = uniqueImageFeed()
-//        let timestamp = Date()
-//
-//        insert((feed, timestamp), to: storeToInsert)
-//
-//        expect(storeToLoad, toRetrieve: .found(feed: feed, timestamp: timestamp))
+        let storeToInsert = makeSUT()
+        let storeToLoad = makeSUT()
+        let feed = uniqueImageFeed()
+        let timestamp = Date()
+
+        insert((feed, timestamp), to: storeToInsert)
+
+        expect(storeToLoad, toRetrieve: .found(feed: feed, timestamp: timestamp))
     }
     
     func test_insert_overridesFeedInsertedOnAnotherInstance() {
@@ -77,7 +82,7 @@ class FeedStoreIntegrationTests: XCTestCase {
     
     private func makeSUT() -> FeedStore {
         let sut = try! CoreDataFeedStore(
-            storeUrl: URL(fileURLWithPath: "/dev/null"),
+            storeUrl: storeUrl,
             bundle: .init(for: CoreDataFeedStore.self)
         )
 
@@ -85,11 +90,11 @@ class FeedStoreIntegrationTests: XCTestCase {
     }
     
     private func setupEmptyStoreState() {
-
+        try? fileManager.removeItem(at: storeUrl)
     }
 
     private func undoStoreSideEffects() {
-
+        try? fileManager.removeItem(at: storeUrl)
     }
 
 }

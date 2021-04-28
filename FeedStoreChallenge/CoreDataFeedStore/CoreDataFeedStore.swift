@@ -87,16 +87,10 @@ private extension NSPersistentContainer {
     }
 
     private func loadPersistentStoresSync() throws {
-        let group = DispatchGroup()
-        group.enter()
-
         var error: Error?
         loadPersistentStores(completionHandler: {
             error = $1.map(Error.loadPersistentStores)
-            group.leave()
         })
-
-        group.wait()
 
         try error.map({ throw $0 })
     }

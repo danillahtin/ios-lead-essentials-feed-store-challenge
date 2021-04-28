@@ -51,7 +51,10 @@ private extension NSManagedObjectContext {
         perform { [self] in
             do {
                 try block(self)
-                try self.save()
+
+                if self.hasChanges {
+                    try self.save()
+                }
 
                 completion(.none)
             } catch {
